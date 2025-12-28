@@ -1,0 +1,277 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
+import { Card, Avatar, Searchbar, FAB, IconButton, Button } from 'react-native-paper';
+import { mockEmployees } from '../data/mockEmployees';
+
+const EmployeeList = ({ navigation }) => {
+  const [employees, setEmployees] = useState(mockEmployees);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredEmployees, setFilteredEmployees] = useState(mockEmployees);
+
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = employees.filter(emp =>
+        emp.personalData.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emp.membershipNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emp.personalData.cnic.includes(searchQuery)
+      );
+      setFilteredEmployees(filtered);
+    } else {
+      setFilteredEmployees(employees);
+    }
+  }, [searchQuery, employees]);
+
+  const renderEmployee = ({ item }) => (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('EmployeeForm', { employee: item, onSave: handleSaveEmployee })}
+    >
+      <Card style={styles.card}>
+        <Card.Content>
+          <View style={styles.row}>
+            <View style={styles.infoContainer}>
+              <Text style={styles.name}>{item.personalData.fullName}</Text>
+              <Text style={styles.details}>Rank: {item.personalData.rank}</Text>
+              <Text style={styles.details}>Membership: {item.membershipNumber}</Text>
+              <Text style={styles.details}>Status: {item.personalData.status}</Text>
+              <View style={[styles.statusBadge, { 
+                backgroundColor: item.personalData.status === 'Serving' ? '#4CAF50' : '#FF9800' 
+              }]}>
+                <Text style={styles.statusText}>{item.personalData.status}</Text>
+              </View>
+            </View>
+            <IconButton
+              icon="pencil"
+              size={20}
+              onPress={() => navigation.navigate('EmployeeForm', { 
+                employee: item, 
+                onSave: handleSaveEmployee 
+              })}
+            />
+          </View>
+          
+          <View style={styles.feeSummary}>
+            <Text style={styles.feeText}>
+              Total Paid: ?{item.accountData.totalFeePaid.toLocaleString()}
+            </Text>
+            <Text style={[
+              styles.feeText,
+              item.accountData.feeRemaining > 0 ? styles.pending : styles.paid
+            ]}>
+              Remaining: ?{item.accountData.feeRemaining.toLocaleString()}
+            </Text>
+          </View>
+        </Card.Content>
+      </Card>
+    </TouchableOpacity>
+  );
+
+  const handleSaveEmployee = (updatedEmployee) => {
+    setEmployees(prev =>
+      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+    );
+  };
+
+  const handleAddEmployee = () => {
+    const newEmployee = {
+      id: employees.length + 1,
+      serialNumber: employees.length + 1,
+      dateOfJoining: new Date().toISOString().split('T')[0],
+      dateOfLeaving: null,
+      membershipPeriod: '0 years',
+      membershipNumber: `MEM${String(employees.length + 1).padStart(4, '0')}`,
+      personalData: {
+        ownName: '',
+        personalNumber: '',
+        rank: 'Lt/Capt/Maj',
+        fullName: 'New Employee',
+        officeAddress: '',
+        residenceAddress: '',
+        appointment: '',
+        status: 'Serving',
+        cnic: '',
+        whatsapp: '',
+        personalAssistant: { name: '', number: '' }
+      },
+      accountData: {
+        registrationFee: { paid: false, amount: 600 },
+        quarterlyFee: { paid: false, amount: 1500 },
+        sixMonthFee: { paid: false, amount: 3000 },
+        nineMonthFee: { paid: false, amount: 4500 },
+        yearlyFee: { paid: false, amount: 6000 },
+        totalFeePaid: 0,
+        feeRemaining: 15600,
+        wholeFeePaidTillJoining: 0,
+        cardReceiver: { name: '', contact: '' },
+        remarks: 'New member'
+      },
+      profilePicture: ''
+    };
+    
+    navigation.navigate('EmployeeForm', { 
+      employee: newEmployee, 
+      onSave: handleSaveEmployee,
+      isNew: true 
+    });
+  };
+
+  return (
+    <View style={styles.container}>
+      <Searchbar
+        placeholder="Search by name, membership, or CNIC"
+        onChangeText={setSearchQuery}
+        value={searchQuery}
+        style={styles.searchbar}
+      />
+      
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>500</Text>
+          <Text style={styles.statLabel}>Total Employees</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>
+            {employees.filter(e => e.personalData.status === 'Serving').length}
+          </Text>
+          <Text style={styles.statLabel}>Serving</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>
+            {employees.filter(e => e.accountData.feeRemaining > 0).length}
+          </Text>
+          <Text style={styles.statLabel}>Pending Fees</Text>
+        </View>
+      </View>
+
+      <Button
+        mode="contained"
+        onPress={() => navigation.navigate('FeeStructure')}
+        style={styles.feeButton}
+        icon="cash"
+      >
+        View Fee Structure
+      </Button>
+
+      <FlatList
+        data={filteredEmployees}
+        renderItem={renderEmployee}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+      />
+
+      <FAB
+        style={styles.fab}
+        icon="plus"
+        onPress={handleAddEmployee}
+        label="Add Employee"
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  searchbar: {
+    margin: 10,
+    elevation: 2,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 10,
+    borderRadius: 10,
+    elevation: 2,
+  },
+  statCard: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1a73e8',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  feeButton: {
+    margin: 10,
+    backgroundColor: '#4CAF50',
+  },
+  card: {
+    marginHorizontal: 10,
+    marginVertical: 5,
+    elevation: 3,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoContainer: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  details: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  statusBadge: {
+    position: 'absolute',
+    right: 10,
+    top: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  feeSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  feeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pending: {
+    color: '#f44336',
+  },
+  paid: {
+    color: '#4CAF50',
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#1a73e8',
+  },
+  list: {
+    paddingBottom: 80,
+  },
+});
+
+export default EmployeeList;

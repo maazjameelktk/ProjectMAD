@@ -1,0 +1,615 @@
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Text,
+  Alert,
+} from 'react-native';
+import {
+  TextInput,
+  Button,
+  Card,
+  RadioButton,
+  Switch,
+  Chip,
+  Divider,
+} from 'react-native-paper';
+
+const EmployeeForm = ({ route, navigation }) => {
+  const { employee, onSave } = route.params || {};
+  const [formData, setFormData] = useState(employee);
+  const [activeTab, setActiveTab] = useState('personal');
+
+  const ranks = [
+    { title: 'Lt/Capt/Maj', fee: 500 },
+    { title: 'Lt Col/Col', fee: 1000 },
+    { title: 'Brig', fee: 1200 },
+    { title: 'Maj Gen', fee: 1500 },
+    { title: 'Lt Gen', fee: 2000 },
+    { title: 'Gen', fee: 2000 },
+  ];
+
+  const calculateFees = (rankTitle) => {
+    const rank = ranks.find(r => r.title === rankTitle) || ranks[0];
+    return {
+      quarterly: rank.fee * 3,
+      sixMonths: rank.fee * 6,
+      nineMonths: rank.fee * 9,
+      yearly: rank.fee * 12,
+    };
+  };
+
+  const currentFees = calculateFees(formData.personalData.rank);
+  const currentRank = ranks.find(r => r.title === formData.personalData.rank) || ranks[0];
+
+  const updateFeeStatus = (field, paid) => {
+    const newAccountData = { ...formData.accountData };
+    newAccountData[field].paid = paid;
+    
+    let totalPaid = 0;
+    const feeFields = ['registrationFee', 'quarterlyFee', 'sixMonthFee', 'nineMonthFee', 'yearlyFee'];
+    feeFields.forEach(f => {
+      if (newAccountData[f].paid) {
+        totalPaid += newAccountData[f].amount;
+      }
+    });
+    
+    const totalFee = 600 + currentFees.quarterly + currentFees.sixMonths + currentFees.nineMonths + currentFees.yearly;
+    
+    newAccountData.totalFeePaid = totalPaid;
+    newAccountData.feeRemaining = totalFee - totalPaid;
+    
+    setFormData({
+      ...formData,
+      accountData: newAccountData,
+    });
+  };
+
+  const handleSave = () => {
+    onSave(formData);
+    Alert.alert('Success', 'Employee data saved successfully!');
+    navigation.goBack();
+  };
+
+  const feeLabels = {
+    'registrationFee': 'Registration Fee (?600)',
+    'quarterlyFee': `Quarterly Fee (?${currentFees.quarterly})`,
+    'sixMonthFee': `Six Months Fee (?${currentFees.sixMonths})`,
+    'nineMonthFee': `Nine Months Fee (?${currentFees.nineMonths})`,
+    'yearlyFee': `Yearly Fee (?${currentFees.yearly})`,
+  };
+
+  const renderPersonalData = () => (
+    <Card style={styles.sectionCard}>
+      <Card.Title title="Personal Data" />
+      <Card.Content>
+        <TextInput
+          label="Member'\''s Own Name"
+          value={formData.personalData.ownName}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, ownName: text }
+          })}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Full Name of Real Member"
+          value={formData.personalData.fullName}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, fullName: text }
+          })}
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Rank</Text>
+        <View style={styles.rankContainer}>
+          {ranks.map(rank => (
+            <Chip
+              key={rank.title}
+              selected={formData.personalData.rank === rank.title}
+              onPress={() => {
+                const fees = calculateFees(rank.title);
+                setFormData({
+                  ...formData,
+                  personalData: { ...formData.personalData, rank: rank.title },
+                  accountData: {
+                    ...formData.accountData,
+                    quarterlyFee: { ...formData.accountData.quarterlyFee, amount: fees.quarterly },
+                    sixMonthFee: { ...formData.accountData.sixMonthFee, amount: fees.sixMonths },
+                    nineMonthFee: { ...formData.accountData.nineMonthFee, amount: fees.nineMonths },
+                    yearlyFee: { ...formData.accountData.yearlyFee, amount: fees.yearly },
+                    feeRemaining: 600 + fees.quarterly + fees.sixMonths + fees.nineMonths + fees.yearly
+                  }
+                });
+              }}
+              style={styles.rankChip}
+            >
+              {rank.title}
+            </Chip>
+          ))}
+        </View>
+
+        <TextInput
+          label="Members CNIC No"
+          value={formData.personalData.cnic}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, cnic: text }
+          })}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="WhatsApp Number"
+          value={formData.personalData.whatsapp}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, whatsapp: text }
+          })}
+          style={styles.input}
+          keyboardType="phone-pad"
+        />
+
+        <Text style={styles.label}>Status</Text>
+        <RadioButton.Group
+          onValueChange={value => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, status: value }
+          })}
+          value={formData.personalData.status}
+        >
+          <View style={styles.radioRow}>
+            <RadioButton.Item label="Serving" value="Serving" />
+            <RadioButton.Item label="Retired" value="Retired" />
+          </View>
+        </RadioButton.Group>
+
+        <TextInput
+          label="Office Address"
+          value={formData.personalData.officeAddress}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, officeAddress: text }
+          })}
+          multiline
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Residence Address"
+          value={formData.personalData.residenceAddress}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, residenceAddress: text }
+          })}
+          multiline
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Personal Assistant Name & Number"
+          value={`${formData.personalData.personalAssistant.name} - ${formData.personalData.personalAssistant.number}`}
+          onChangeText={text => {
+            const parts = text.split(' - ');
+            setFormData({
+              ...formData,
+              personalData: {
+                ...formData.personalData,
+                personalAssistant: {
+                  name: parts[0] || '',
+                  number: parts[1] || ''
+                }
+              }
+            });
+          }}
+          style={styles.input}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  const renderAccountData = () => (
+    <Card style={styles.sectionCard}>
+      <Card.Title title="Account Data" />
+      <Card.Content>
+        <Text style={styles.feeInfo}>
+          Current Rank: {formData.personalData.rank} (?{currentRank.fee}/- per month)
+        </Text>
+
+        <Divider style={styles.divider} />
+
+        {Object.keys(feeLabels).map(field => (
+          <View key={field} style={[
+            styles.feeRow,
+            formData.accountData[field].paid ? styles.paidRow : styles.pendingRow
+          ]}>
+            <View style={styles.feeInfoContainer}>
+              <Text style={styles.feeLabel}>{feeLabels[field]}</Text>
+              {!formData.accountData[field].paid && (
+                <Text style={styles.pendingText}>This fees is pending</Text>
+              )}
+            </View>
+            <View style={styles.feeStatus}>
+              <Switch
+                value={formData.accountData[field].paid}
+                onValueChange={(value) => updateFeeStatus(field, value)}
+                color="#4CAF50"
+                disabled={formData.accountData[field].paid}
+              />
+              <Text style={[
+                styles.feeStatusText,
+                formData.accountData[field].paid ? styles.paidText : styles.pendingText
+              ]}>
+                {formData.accountData[field].paid ? 'PAID ?' : 'UNPAID'}
+              </Text>
+            </View>
+          </View>
+        ))}
+
+        <Divider style={styles.divider} />
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Fee Summary</Text>
+          
+          <View style={styles.summaryRow}>
+            <Text>Registration Fee:</Text>
+            <Text style={[
+              styles.summaryAmount,
+              formData.accountData.registrationFee.paid ? styles.paidAmount : styles.pendingAmount
+            ]}>
+              ?{formData.accountData.registrationFee.amount}
+            </Text>
+          </View>
+          
+          <View style={styles.summaryRow}>
+            <Text>Total Fee Paid:</Text>
+            <Text style={styles.summaryAmount}>
+              ?{formData.accountData.totalFeePaid.toLocaleString()}
+            </Text>
+          </View>
+          
+          <View style={styles.summaryRow}>
+            <Text>Fee Remaining:</Text>
+            <Text style={[
+              styles.summaryAmount,
+              formData.accountData.feeRemaining > 0 ? styles.pendingAmount : styles.paidAmount
+            ]}>
+              ?{formData.accountData.feeRemaining.toLocaleString()}
+            </Text>
+          </View>
+          
+          <View style={styles.summaryRow}>
+            <Text>Total Since Joining:</Text>
+            <Text style={styles.summaryAmount}>
+              ?{formData.accountData.wholeFeePaidTillJoining.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
+        <TextInput
+          label="Members Card Receiver Name & Contact"
+          value={`${formData.accountData.cardReceiver.name} - ${formData.accountData.cardReceiver.contact}`}
+          onChangeText={text => {
+            const parts = text.split(' - ');
+            setFormData({
+              ...formData,
+              accountData: {
+                ...formData.accountData,
+                cardReceiver: {
+                  name: parts[0] || '',
+                  contact: parts[1] || ''
+                }
+              }
+            });
+          }}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Remarks"
+          value={formData.accountData.remarks}
+          onChangeText={text => setFormData({
+            ...formData,
+            accountData: { ...formData.accountData, remarks: text }
+          })}
+          multiline
+          style={styles.input}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  const renderMembershipData = () => (
+    <Card style={styles.sectionCard}>
+      <Card.Title title="Membership Data" />
+      <Card.Content>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Serial Number:</Text>
+          <Text style={styles.infoValue}>{formData.serialNumber}</Text>
+        </View>
+
+        <TextInput
+          label="Membership Number"
+          value={formData.membershipNumber}
+          onChangeText={text => setFormData({ ...formData, membershipNumber: text })}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Date of Joining"
+          value={formData.dateOfJoining}
+          onChangeText={text => setFormData({ ...formData, dateOfJoining: text })}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Date of Leaving"
+          value={formData.dateOfLeaving || ''}
+          onChangeText={text => setFormData({ ...formData, dateOfLeaving: text || null })}
+          style={styles.input}
+          placeholder="Leave empty if still serving"
+        />
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Membership Period:</Text>
+          <Text style={styles.infoValue}>{formData.membershipPeriod}</Text>
+        </View>
+
+        <TextInput
+          label="Personal Number"
+          value={formData.personalData.personalNumber}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, personalNumber: text }
+          })}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Appointment"
+          value={formData.personalData.appointment}
+          onChangeText={text => setFormData({
+            ...formData,
+            personalData: { ...formData.personalData, appointment: text }
+          })}
+          style={styles.input}
+        />
+      </Card.Content>
+    </Card>
+  );
+
+  return (
+    <View style={styles.container}>
+      <ScrollView>
+        <Card style={styles.headerCard}>
+          <Card.Content>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerName}>{formData.personalData.fullName}</Text>
+              <Text style={styles.headerDetails}>{formData.personalData.rank} • {formData.membershipNumber}</Text>
+              <Chip
+                icon={formData.personalData.status === 'Serving' ? 'check' : 'account-off'}
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: formData.personalData.status === 'Serving' ? '#4CAF50' : '#FF9800' }
+                ]}
+              >
+                {formData.personalData.status}
+              </Chip>
+            </View>
+          </Card.Content>
+        </Card>
+
+        <View style={styles.tabContainer}>
+          <Chip
+            selected={activeTab === 'personal'}
+            onPress={() => setActiveTab('personal')}
+            style={styles.tabChip}
+          >
+            Personal
+          </Chip>
+          <Chip
+            selected={activeTab === 'account'}
+            onPress={() => setActiveTab('account')}
+            style={styles.tabChip}
+          >
+            Account
+          </Chip>
+          <Chip
+            selected={activeTab === 'membership'}
+            onPress={() => setActiveTab('membership')}
+            style={styles.tabChip}
+          >
+            Membership
+          </Chip>
+        </View>
+
+        {activeTab === 'personal' && renderPersonalData()}
+        {activeTab === 'account' && renderAccountData()}
+        {activeTab === 'membership' && renderMembershipData()}
+
+        <Button
+          mode="contained"
+          onPress={handleSave}
+          style={styles.saveButton}
+          icon="content-save"
+        >
+          Save Employee Data
+        </Button>
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  headerCard: {
+    margin: 10,
+    elevation: 3,
+  },
+  headerInfo: {
+    alignItems: 'center',
+  },
+  headerName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  headerDetails: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  statusChip: {
+    marginTop: 10,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 10,
+    paddingHorizontal: 10,
+  },
+  tabChip: {
+    marginHorizontal: 5,
+  },
+  sectionCard: {
+    margin: 10,
+    elevation: 2,
+  },
+  input: {
+    marginBottom: 10,
+    backgroundColor: '#fff',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+    marginTop: 10,
+  },
+  rankContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+  },
+  rankChip: {
+    margin: 2,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 10,
+  },
+  feeInfo: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a73e8',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  divider: {
+    marginVertical: 15,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  paidRow: {
+    backgroundColor: '#f0f8f0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  pendingRow: {
+    backgroundColor: '#fff8f8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  feeInfoContainer: {
+    flex: 1,
+  },
+  feeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  feeStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  feeStatusText: {
+    marginLeft: 8,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  paidText: {
+    color: '#4CAF50',
+  },
+  pendingText: {
+    color: '#f44336',
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  summaryCard: {
+    backgroundColor: '#e3f2fd',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    marginBottom: 10,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 5,
+  },
+  summaryAmount: {
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  pendingAmount: {
+    color: '#f44336',
+  },
+  paidAmount: {
+    color: '#4CAF50',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#666',
+  },
+  saveButton: {
+    margin: 20,
+    paddingVertical: 8,
+    backgroundColor: '#1a73e8',
+  },
+});
+
+export default EmployeeForm;

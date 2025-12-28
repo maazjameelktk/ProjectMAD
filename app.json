@@ -19,7 +19,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.employeemanagement.app",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -43,6 +45,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f051b0b6-80aa-450a-b2e6-d90c0186e1bc"
+      }
     }
   }
 }
